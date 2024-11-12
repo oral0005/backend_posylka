@@ -1,5 +1,6 @@
 // routes/courierPosts.js
 const express = require('express');
+const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const CourierPost = require('../models/CourierPost');
 const router = express.Router();
@@ -33,6 +34,7 @@ router.post('/', authenticateToken, async (req, res) => {
         const post = await newPost.save();
         res.json(post);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
@@ -43,6 +45,7 @@ router.get('/', async (req, res) => {
         const posts = await CourierPost.find().populate('userId', 'username');
         res.json(posts);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
@@ -52,11 +55,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { route, departureTime, pricePerParcel, phoneNumber, description } = req.body;
 
     try {
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ msg: 'Invalid post ID' });
+        }
+
         let post = await CourierPost.findById(req.params.id);
         if (!post) return res.status(404).json({ msg: 'Post not found' });
 
-        if (post.userId.toString() !== req.user.userId)
+        if (post.userId.toString() !== req.user.userId) {
             return res.status(401).json({ msg: 'Not authorized' });
+        }
 
         // Update fields
         post.route = route || post.route;
@@ -68,6 +77,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         post = await post.save();
         res.json(post);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
@@ -75,15 +85,25 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete a Courier Post
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ msg: 'Invalid post ID' });
+        }
+
         let post = await CourierPost.findById(req.params.id);
-        if (!post) return res.status(404).json({ msg: 'Post not found' });
 
-        if (post.userId.toString() !== req.user.userId)
+        if (!post) {
+            return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        if (post.userId.toString() !== req.user.userId) {
             return res.status(401).json({ msg: 'Not authorized' });
+        }
 
-        await CourierPost.findByIdAndRemove(req.params.id);
+        await CourierPost.findByIdAndDelete(req.params.id); // Use findByIdAndDelete instead
         res.json({ msg: 'Post removed' });
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
