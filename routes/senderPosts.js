@@ -1,4 +1,4 @@
-// routes/senderPosts.js
+// backend/routes/senderPosts.js
 const express = require('express');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
@@ -14,17 +14,9 @@ async function authenticateToken(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Fetch user from DB
         const user = await User.findById(decoded.userId);
         if (!user) return res.status(401).json({ msg: 'User not found' });
-
-        // Check if phone is verified
-        if (!user.isPhoneVerified) {
-            return res.status(401).json({ msg: 'Phone number not verified' });
-        }
-
-        req.user = user; // Attach the full user object
+        req.user = user;
         next();
     } catch (err) {
         res.status(401).json({ msg: 'Token is not valid' });
@@ -33,12 +25,13 @@ async function authenticateToken(req, res, next) {
 
 // Create a Sender Post
 router.post('/', authenticateToken, async (req, res) => {
-    const { route, sendTime, parcelPrice, description } = req.body;
+    const { from, to, sendTime, parcelPrice, description } = req.body;
 
     try {
         const newPost = new SenderPost({
             userId: req.user.id,
-            route,
+            from,
+            to,
             sendTime,
             parcelPrice,
             description,
@@ -47,7 +40,8 @@ router.post('/', authenticateToken, async (req, res) => {
         const post = await newPost.save();
         res.json(post);
     } catch (err) {
-        res.status(500).send('Server Error');
+        console.error(err.message);
+        res.status(500).json({ msg: 'Server Error' });
     }
 });
 
@@ -60,16 +54,30 @@ router.get('/', async (req, res) => {
         );
         res.json(posts);
     } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ msg: 'Server Error' });
+    }
+});
+
+// Get Current User's Sender Posts
+router.get('/my-posts', authenticateToken, async (req, res) => {
+    try {
+        const posts = await SenderPost.find({ userId: req.user.id }).populate(
+            'userId',
+            'username phoneNumber name surname'
+        );
+        res.json(posts);
+    } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
 
 // Update a Sender Post
 router.put('/:id', authenticateToken, async (req, res) => {
-    const { route, sendTime, parcelPrice, description } = req.body;
+    const { from, to, sendTime, parcelPrice, description } = req.body;
 
     try {
-        // Validate ObjectId format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ msg: 'Invalid post ID' });
         }
@@ -81,8 +89,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        // Update fields
-        post.route = route || post.route;
+        post.from = from || post.from;
+        post.to = to || post.to;
         post.sendTime = sendTime || post.sendTime;
         post.parcelPrice = parcelPrice || post.parcelPrice;
         post.description = description || post.description;
@@ -91,23 +99,19 @@ router.put('/:id', authenticateToken, async (req, res) => {
         res.json(post);
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Server Error' });
     }
 });
 
 // Delete a Sender Post
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
-        // Validate ObjectId format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ msg: 'Invalid post ID' });
         }
 
         let post = await SenderPost.findById(req.params.id);
-
-        if (!post) {
-            return res.status(404).json({ msg: 'Post not found' });
-        }
+        if (!post) return res.status(404).json({ msg: 'Post not found' });
 
         if (post.userId.toString() !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
@@ -117,7 +121,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         res.json({ msg: 'Post removed' });
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Server Error' });
     }
 });
 

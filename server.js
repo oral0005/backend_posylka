@@ -1,5 +1,5 @@
-// server.js
-require('dotenv').config(); // Load environment variables
+// backend/server.js
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -16,10 +16,9 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/intercity-parcel', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-});
+mongoose.connect('mongodb://127.0.0.1:27017/intercity-parcel')
+    .then(() => console.log('Connected to MongoDB'))
+    .catch((err) => console.error('Failed to connect to MongoDB', err));
 
 // Use Routes
 app.use('/api/users', userRoutes);
@@ -27,4 +26,4 @@ app.use('/api/courier-posts', courierPostRoutes);
 app.use('/api/sender-posts', senderPostRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Server started on port: http://localhost:${PORT}`));

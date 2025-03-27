@@ -1,4 +1,4 @@
-// routes/courierPosts.js
+// backend/routes/courierPosts.js
 const express = require('express');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
@@ -14,17 +14,9 @@ async function authenticateToken(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Fetch user from DB
         const user = await User.findById(decoded.userId);
         if (!user) return res.status(401).json({ msg: 'User not found' });
-
-        // Check if phone is verified
-        if (!user.isPhoneVerified) {
-            return res.status(401).json({ msg: 'Phone number not verified' });
-        }
-
-        req.user = user; // Attach the full user object
+        req.user = user;
         next();
     } catch (err) {
         res.status(401).json({ msg: 'Token is not valid' });
@@ -33,12 +25,13 @@ async function authenticateToken(req, res, next) {
 
 // Create a Courier Post
 router.post('/', authenticateToken, async (req, res) => {
-    const { route, departureTime, pricePerParcel, description } = req.body;
+    const { from, to, departureTime, pricePerParcel, description } = req.body;
 
     try {
         const newPost = new CourierPost({
             userId: req.user.id,
-            route,
+            from,
+            to,
             departureTime,
             pricePerParcel,
             description,
@@ -66,12 +59,25 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Get Current User's Courier Posts
+router.get('/my-posts', authenticateToken, async (req, res) => {
+    try {
+        const posts = await CourierPost.find({ userId: req.user.id }).populate(
+            'userId',
+            'username phoneNumber name surname'
+        );
+        res.json(posts);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // Update a Courier Post
 router.put('/:id', authenticateToken, async (req, res) => {
-    const { route, departureTime, pricePerParcel, description } = req.body;
+    const { from, to, departureTime, pricePerParcel, description } = req.body;
 
     try {
-        // Validate ObjectId format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ msg: 'Invalid post ID' });
         }
@@ -83,8 +89,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        // Update fields
-        post.route = route || post.route;
+        post.from = from || post.from;
+        post.to = to || post.to;
         post.departureTime = departureTime || post.departureTime;
         post.pricePerParcel = pricePerParcel || post.pricePerParcel;
         post.description = description || post.description;
@@ -100,16 +106,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete a Courier Post
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
-        // Validate ObjectId format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ msg: 'Invalid post ID' });
         }
 
         let post = await CourierPost.findById(req.params.id);
-
-        if (!post) {
-            return res.status(404).json({ msg: 'Post not found' });
-        }
+        if (!post) return res.status(404).json({ msg: 'Post not found' });
 
         if (post.userId.toString() !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
