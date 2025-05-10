@@ -1,5 +1,3 @@
-#backend/ml/price_prediction.py
-
 import json
 import sys
 from pymongo import MongoClient
@@ -39,22 +37,22 @@ print("Distance matrix generated")
 def get_distance(from_city, to_city):
     return distance_matrix.get(from_city, {}).get(to_city, 500)  # Default 500km if not found
 
-def train_and_predict(post_type):
-    collection = db['senderposts'] if post_type == 'sender' else db['courierposts']
-    price_field = 'parcelPrice' if post_type == 'sender' else 'pricePerParcel'
+def train_and_predict():
+    # Fetch historical data from both senderposts and courierposts
+    print("Fetching posts from MongoDB...")
+    sender_data = list(db['senderposts'].find({}, {'from': 1, 'to': 1, 'parcelPrice': 1, '_id': 0}))
+    courier_data = list(db['courierposts'].find({}, {'from': 1, 'to': 1, 'pricePerParcel': 1, '_id': 0}))
+    print(f"Fetched {len(sender_data)} sender posts and {len(courier_data)} courier posts")
 
-    # Fetch historical data
-    print(f"Fetching {post_type} posts from MongoDB...")
-    data = list(collection.find({}, {'from': 1, 'to': 1, price_field: 1, '_id': 0}))
-    print(f"Fetched {len(data)} {post_type} posts")
-
-    if not data:
-        print(f"No data found for {post_type} posts", file=sys.stderr)
+    if not sender_data and not courier_data:
+        print("No data found for posts", file=sys.stderr)
         return []
 
-    # Prepare DataFrame
-    print(f"Preparing DataFrame for {post_type} posts...")
-    df = pd.DataFrame(data)
+    # Prepare combined DataFrame
+    print("Preparing combined DataFrame...")
+    sender_df = pd.DataFrame(sender_data).rename(columns={'parcelPrice': 'price'})
+    courier_df = pd.DataFrame(courier_data).rename(columns={'pricePerParcel': 'price'})
+    df = pd.concat([sender_df, courier_df], ignore_index=True)
     df['distance'] = df.apply(lambda row: get_distance(row['from'], row['to']), axis=1)
     print("DataFrame prepared")
 
@@ -68,10 +66,10 @@ def train_and_predict(post_type):
 
     # Features and target
     X = df[['from_encoded', 'to_encoded', 'distance']]
-    y = df[price_field]
+    y = df['price']
 
     # Train Random Forest model
-    print(f"Training Random Forest model for {post_type} posts...")
+    print("Training Random Forest model...")
     model = RandomForestRegressor(n_estimators=50, random_state=42)
     model.fit(X, y)
     print("Model trained")
@@ -95,27 +93,21 @@ def train_and_predict(post_type):
         predictions.append({
             'from': from_city,
             'to': to_city,
-            'postType': post_type,
-            'recommendedPrice': max(round(predicted_price, -2), 50)  # Округляем до сотен, минимум 50
+            'recommendedPrice': max(round(predicted_price, -2), 50)  # Round to hundreds, minimum 50
         })
 
     return predictions
 
 def main():
-    # Generate predictions for both sender and courier posts
-    print("Generating predictions for sender posts...")
-    sender_predictions = train_and_predict('sender')
-    print("Generating predictions for courier posts...")
-    courier_predictions = train_and_predict('courier')
-    predictions = sender_predictions + courier_predictions
+    # Generate predictions
+    print("Generating predictions...")
+    predictions = train_and_predict()
     print(f"Total predictions generated: {len(predictions)}")
 
     # Insert predictions into MongoDB priceprediction collection
     if predictions:
         print("Inserting predictions into MongoDB priceprediction collection...")
-        # Clear existing data in the collection to avoid duplicates (optional)
-        price_prediction_collection.delete_many({})
-        # Insert new predictions
+        price_prediction_collection.delete_many({})  # Clear existing data
         price_prediction_collection.insert_many(predictions)
         print(f"Inserted {len(predictions)} predictions into priceprediction collection")
     else:
