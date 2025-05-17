@@ -1,10 +1,15 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const axios = require('axios');
 const { ObjectId } = mongoose.Types;
 
-mongoose.connect('mongodb://localhost:27017/intercity-parcel')
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+// Connect to MongoDB Atlas
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+    .then(() => console.log('Connected to MongoDB Atlas'))
+    .catch(err => console.error('MongoDB Atlas connection error:', err));
 
 const CourierPostSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -23,7 +28,7 @@ const cities = [
     'Taraz', 'Pavlodar', 'Ust-Kamenogorsk', 'Semey', 'Atyrau',
     'Kostanay', 'Kyzylorda', 'Uralsk', 'Petropavl', 'Aktau',
     'Temirtau', 'Turkestan', 'Taldykorgan', 'Ekibastuz', 'Rudny', 'Zhanaozen',
-    'Zhezkazgan', 'Kentau', 'Balkhash', ' Vakhtinsk', 'Ridder', 'Arkalyk', 'Lisakovsk', 'Aral', 'Zhetisay',
+    'Zhezkazgan', 'Kentau', 'Balkhash', 'Shakhtinsk', 'Ridder', 'Arkalyk', 'Lisakovsk', 'Aral', 'Zhetisay',
     'Saryagash', 'Aksu', 'Stepnogorsk', 'Kapchagay'
 ];
 
@@ -44,7 +49,7 @@ const fallbackDistances = {
 
 const distanceCache = {};
 
-const API_KEY = 'wzhuzLMzcc3sTvHJBDJ6j7EHhSfxIcjtu166tgPtEHfzrgZ71xjVojwYzSrTCzrC';
+const API_KEY = process.env.API_KEY;
 
 async function fetchDistance(from, to, retries = 3, delay = 1000) {
     const key = `${from}_${to}`;

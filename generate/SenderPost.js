@@ -1,10 +1,28 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const axios = require('axios');
 const { ObjectId } = mongoose.Types;
 
-mongoose.connect('mongodb://localhost:27017/intercity-parcel')
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+// Validate environment variables
+if (!process.env.MONGO_URI) {
+    console.error('Error: MONGO_URI is not defined in .env file');
+    process.exit(1);
+}
+if (!process.env.API_KEY) {
+    console.error('Error: API_KEY is not defined in .env file');
+    process.exit(1);
+}
+
+// Connect to MongoDB Atlas
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+    .then(() => console.log('Connected to MongoDB Atlas'))
+    .catch(err => {
+        console.error('MongoDB Atlas connection error:', err);
+        process.exit(1);
+    });
 
 const SenderPostSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -45,7 +63,7 @@ const fallbackDistances = {
 
 const distanceCache = {};
 
-const API_KEY = 'wzhuzLMzcc3sTvHJBDJ6j7EHhSfxIcjtu166tgPtEHfzrgZ71xjVojwYzSrTCzrC';
+const API_KEY = process.env.API_KEY;
 
 async function fetchDistance(from, to, retries = 3, delay = 1000) {
     const key = `${from}_${to}`;
@@ -170,6 +188,7 @@ async function generateTrainingData() {
         console.log('Distance cache:', distanceCache);
     } catch (err) {
         console.error('Error inserting posts:', err);
+        process.exit(1);
     } finally {
         mongoose.connection.close();
     }
