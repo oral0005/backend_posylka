@@ -13,12 +13,12 @@ class MongoJSONEncoder(json.JSONEncoder):
             return str(obj)
         return super().default(obj)
 
-# Connect to MongoDB
-print("Connecting to MongoDB...")
-client = MongoClient('mongodb://127.0.0.1:27017/')
+# Connect to MongoDB Atlas
+print("Connecting to MongoDB Atlas...")
+client = MongoClient('mongodb+srv://oralanykbajuly:oralkz.com@cluster0.4ndfquj.mongodb.net/intercity-parcel?retryWrites=true&w=majority')
 db = client['intercity-parcel']
 price_prediction_collection = db['priceprediction']
-print("Connected to MongoDB")
+print("Connected to MongoDB Atlas")
 
 # Mock distance matrix (in km, replace with real data or API in production)
 cities = [
