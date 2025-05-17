@@ -1,4 +1,3 @@
-// backend/models/SenderPost.js
 const mongoose = require('mongoose');
 
 const SenderPostSchema = new mongoose.Schema({

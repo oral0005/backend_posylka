@@ -7,5 +7,5 @@ const PricePredictionSchema = new mongoose.Schema({
     recommendedPrice: Number,
 });
 
-// Указываем явно имя коллекции
+
 module.exports = mongoose.model('PricePrediction', PricePredictionSchema, 'priceprediction');

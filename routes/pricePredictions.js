@@ -9,20 +9,19 @@ router.get('/recommended-price', async (req, res) => {
         return res.status(400).json({ msg: 'Missing required query parameters: from, to' });
     }
 
-    // Удаляем пробелы по краям
+
     from = from.trim();
     to = to.trim();
 
     try {
         console.log('Searching price for route:', { from, to });
 
-        // Пытаемся найти в прямом направлении
         let prediction = await PricePrediction.findOne({
             from: { $regex: `^${from}$`, $options: 'i' },
             to: { $regex: `^${to}$`, $options: 'i' },
         });
 
-        // Если не нашли — ищем в обратном направлении
+
         if (!prediction) {
             console.log('Trying reversed direction...');
             prediction = await PricePrediction.findOne({

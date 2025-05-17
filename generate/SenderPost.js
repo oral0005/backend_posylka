@@ -2,12 +2,10 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const { ObjectId } = mongoose.Types;
 
-// Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/intercity-parcel')
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
 
-// SenderPost schema
 const SenderPostSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     from: { type: String, required: true },
@@ -20,7 +18,6 @@ const SenderPostSchema = new mongoose.Schema({
 
 const SenderPost = mongoose.model('SenderPost', SenderPostSchema);
 
-// Kazakhstan cities (from price_prediction.py)
 const cities = [
     'Almaty', 'Astana', 'Shymkent', 'Karaganda', 'Aktobe',
     'Taraz', 'Pavlodar', 'Ust-Kamenogorsk', 'Semey', 'Atyrau',
@@ -31,13 +28,11 @@ const cities = [
     'Saryagash', 'Aksu', 'Stepnogorsk', 'Kapchagay'
 ];
 
-// Key routes for price_prediction.py
 const keyRoutes = [
     { from: 'Astana', to: 'Shymkent' },
     { from: 'Almaty', to: 'Astana' },
 ];
 
-// Fallback distance matrix (km, accurate)
 const fallbackDistances = {
     'Almaty_Astana': 1200,
     'Astana_Shymkent': 1265,
@@ -48,13 +43,10 @@ const fallbackDistances = {
     'Shymkent_Taraz': 150,
 };
 
-// Distance cache to minimize API calls
 const distanceCache = {};
 
-// Distancematrix.ai API key
-const API_KEY = 'LwmUsodhJQTu7RuNLjfBOIL5oC4l8PduRahAgoNwdojGhJWoZTMSvouoHyMWlQT5';
+const API_KEY = 'wzhuzLMzcc3sTvHJBDJ6j7EHhSfxIcjtu166tgPtEHfzrgZ71xjVojwYzSrTCzrC';
 
-// Fetch distance with retry logic
 async function fetchDistance(from, to, retries = 3, delay = 1000) {
     const key = `${from}_${to}`;
     const reverseKey = `${to}_${from}`;
@@ -101,23 +93,19 @@ async function fetchDistance(from, to, retries = 3, delay = 1000) {
     return fallback;
 }
 
-// Helper functions
 function calculatePrice(distance, sendTime) {
-    const basePrice = 2000; // Base price: 2000 tenge
-    const pricePerKm = 2; // Price per km: 2.5 tenge
+    const basePrice = 2000;
+    const pricePerKm = 2;
     let price = basePrice + distance * pricePerKm;
 
-    // Introduce variability: -30% to +30% to create cheaper and more expensive prices
-    const variation = 0.3; // Allows prices to range from 70% to 130% of base
+    const variation = 0.3;
     const randomFactor = 1 + (Math.random() * 2 - 1) * variation;
     price *= randomFactor;
 
-    // Time-based adjustment
     const startDate = new Date('2025-01-10');
     const daysSinceStart = (sendTime - startDate) / (1000 * 60 * 60 * 24);
     price *= (1 + 0.001 * daysSinceStart);
 
-    // Round to nearest 100 tenge, cap between 2000 and 8000 tenge
     price = Math.min(Math.round(price / 100) * 100, 8000);
     return Math.max(price, 2000);
 }
@@ -138,7 +126,7 @@ function randomDescription() {
 }
 
 function randomCityPair(useKeyRoute) {
-    if (useKeyRoute && Math.random() < 0.7) { // Increased to ensure ~60 posts per key route
+    if (useKeyRoute && Math.random() < 0.7) {
         return keyRoutes[Math.floor(Math.random() * keyRoutes.length)];
     }
     const from = cities[Math.floor(Math.random() * cities.length)];
@@ -147,11 +135,10 @@ function randomCityPair(useKeyRoute) {
     return { from, to };
 }
 
-// Generate training data
 async function generateTrainingData() {
     const posts = [];
-    const startDate = new Date('2025-01-10');
-    const endDate = new Date('2025-03-10');
+    const startDate = new Date('2025-05-20');
+    const endDate = new Date('2025-06-10');
 
     const userIds = [
         new ObjectId('507f1f77bcf86cd799439011'),
@@ -160,7 +147,7 @@ async function generateTrainingData() {
     ];
 
     for (let i = 0; i < 200; i++) {
-        const useKeyRoute = i < 120; // Focus on key routes for first 120 posts
+        const useKeyRoute = i < 120;
         const { from, to } = randomCityPair(useKeyRoute);
         const sendTime = randomDate(startDate, endDate);
         const distance = await fetchDistance(from, to);
@@ -188,5 +175,4 @@ async function generateTrainingData() {
     }
 }
 
-// Run the script
 generateTrainingData();
