@@ -2,9 +2,38 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 
 const User = require('../models/User');
 const router = express.Router();
+
+// Настройка multer для загрузки аватаров
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Папка для сохранения изображений, создай её если нет
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Максимум 5MB
+  fileFilter: (req, file, cb) => {
+    console.log('UPLOAD FILE:', file.originalname, file.mimetype, path.extname(file.originalname));
+    const allowedTypes = /jpeg|jpg|png|webp|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype.toLowerCase());
+    if (extname || mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images are allowed (jpeg, jpg, png, webp, gif)'));
+    }
+  }
+});
 
 // Authentication middleware
 async function authenticateToken(req, res, next) {
