@@ -2,7 +2,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const multer = require('multer');
 
 const User = require('../models/User');
 const router = express.Router();
@@ -125,6 +125,49 @@ router.get('/me', authenticateToken, async (req, res) => {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
+});
+
+// Update user profile with optional avatar upload
+router.put('/me', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+
+    if (req.body.name) user.name = req.body.name;
+    if (req.body.surname) user.surname = req.body.surname;
+    if (req.body.language) user.language = req.body.language;
+
+    if (req.file) {
+      user.avatarUrl = `/uploads/${req.file.filename}`;
+    }
+    if (req.body.avatarUrl) {
+      user.avatarUrl = req.body.avatarUrl.replace(/^https?:\/\/[^/]+/, '');
+    }
+
+    await user.save();
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      phoneNumber: user.phoneNumber,
+      name: user.name,
+      surname: user.surname,
+      avatarUrl: user.avatarUrl || null,
+      language: user.language || 'en',
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Эндпоинт для загрузки аватара
+router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  const avatarUrl = `/uploads/${req.file.filename}`;
+  res.json({ avatarUrl });
 });
 
 module.exports = router;
