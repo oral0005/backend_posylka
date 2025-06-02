@@ -24,7 +24,7 @@ async function authenticateToken(req, res, next) {
 
 // Create a Courier Post
 router.post('/', authenticateToken, async (req, res) => {
-    const { from, to, sendTime, pricePerParcel, description } = req.body;
+    const { from, to, sendTime, parcelPrice, description } = req.body;
 
     try {
         const newPost = new CourierPost({
@@ -32,7 +32,7 @@ router.post('/', authenticateToken, async (req, res) => {
             from,
             to,
             sendTime,
-            pricePerParcel,
+            parcelPrice,
             description,
         });
 
@@ -74,7 +74,7 @@ router.get('/my-posts', authenticateToken, async (req, res) => {
 
 // Update a Courier Post
 router.put('/:id', authenticateToken, async (req, res) => {
-    const { from, to, sendTime, pricePerParcel, description } = req.body;
+    const { from, to, sendTime, parcelPrice, description } = req.body;
 
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -91,7 +91,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         post.from = from || post.from;
         post.to = to || post.to;
         post.sendTime = sendTime || post.sendTime;
-        post.pricePerParcel = pricePerParcel || post.pricePerParcel;
+        post.parcelPrice = parcelPrice || post.parcelPrice;
         post.description = description || post.description;
 
         post = await post.save();
