@@ -10,6 +10,7 @@ const userRoutes = require('./routes/users');
 const courierPostRoutes = require('./routes/courierPosts');
 const senderPostRoutes = require('./routes/senderPosts');
 const pricePredictionRoutes = require('./routes/pricePredictions');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/courier-posts', courierPostRoutes);
 app.use('/api/sender-posts', senderPostRoutes);
 app.use('/api/price-predictions', pricePredictionRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
