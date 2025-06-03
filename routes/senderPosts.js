@@ -88,6 +88,22 @@ router.get('/active', authenticateToken, async (req, res) => {
     }
 });
 
+// Get Completed Sender Posts for User (as sender or courier)
+router.get('/completed', authenticateToken, async (req, res) => {
+    try {
+        const posts = await SenderPost.find({
+            $or: [
+                { userId: req.user.id, status: 'completed' },
+                { assignedCourier: req.user.id, status: 'completed' }
+            ]
+        }).populate('userId assignedCourier', 'username phoneNumber name surname');
+        res.json(posts);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ msg: 'Server Error' });
+    }
+});
+
 // Activate a Sender Post
 router.post('/:id/activate', authenticateToken, async (req, res) => {
     try {
