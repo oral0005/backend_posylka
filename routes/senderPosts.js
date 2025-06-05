@@ -151,7 +151,7 @@ router.post('/:id/activation-response', authenticateToken, async (req, res) => {
             postId: post._id,
             postType: 'sender',
             type: 'activation_request',
-            read: false
+
         }).sort({ createdAt: -1 });
 
         if (!notification) return res.status(404).json({ msg: 'No pending activation request found' });
